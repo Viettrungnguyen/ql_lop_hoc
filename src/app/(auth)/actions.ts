@@ -31,11 +31,16 @@ export async function login(formData: FormData) {
   });
 
   if (!parsed.success) {
-    redirectWithMessage("/login", "error", "Email hoặc mật khẩu chưa hợp lệ.");
+    return redirectWithMessage(
+      "/login",
+      "error",
+      "Email hoặc mật khẩu chưa hợp lệ.",
+    );
   }
 
+  const credentials = parsed.data;
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { error } = await supabase.auth.signInWithPassword(credentials);
 
   if (error) {
     redirectWithMessage("/login", "error", "Không thể đăng nhập. Vui lòng kiểm tra lại thông tin.");
@@ -53,20 +58,25 @@ export async function register(formData: FormData) {
   });
 
   if (!parsed.success) {
-    redirectWithMessage("/register", "error", "Vui lòng điền đầy đủ và dùng mật khẩu từ 8 ký tự.");
+    return redirectWithMessage(
+      "/register",
+      "error",
+      "Vui lòng điền đầy đủ và dùng mật khẩu từ 8 ký tự.",
+    );
   }
 
+  const account = parsed.data;
   const headerStore = await headers();
   const origin = headerStore.get("origin") ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({
-    email: parsed.data.email,
-    password: parsed.data.password,
+    email: account.email,
+    password: account.password,
     options: {
       emailRedirectTo: `${origin}/auth/callback?next=/dashboard`,
       data: {
-        display_name: parsed.data.displayName,
-        onboarding_mode: parsed.data.mode,
+        display_name: account.displayName,
+        onboarding_mode: account.mode,
       },
     },
   });
