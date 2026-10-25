@@ -26,13 +26,34 @@ Việc cần làm trên production trước khi chuyển sang Giai đoạn 1:
 
 ## Giai đoạn 1 — tài khoản và lớp học
 
-Trạng thái: **Tiếp theo**.
+Trạng thái: **Đã có nền tảng mã nguồn cần cho Giai đoạn 2, chờ smoke test production**.
 
-Thứ tự triển khai:
+Đã triển khai:
 
-1. Hồ sơ/onboarding đầy đủ.
-2. Bảng `classes`, `class_members` và RLS helper.
-3. Tạo/sửa/lưu trữ lớp.
-4. Mã tham gia, link mời và duyệt thành viên.
-5. Vai trò/capability, chuyển owner.
-6. Nhóm học tập và target theo nhóm.
+- Bảng `classes`, `class_members`, `groups`, `group_members` và RLS helper.
+- Tạo lớp, tham gia bằng mã và duyệt/từ chối học sinh.
+- Vai trò owner/teacher/teaching assistant/student và capability mở rộng.
+- Tạo nhóm học tập và phân phối nội dung theo nhóm.
+
+Các chức năng quản trị nâng cao như chuyển owner, lưu trữ lớp và màn hình cài đặt lớp tiếp tục được hoàn thiện cùng giai đoạn hardening.
+
+## Giai đoạn 2 — tổ chức dạy học
+
+Trạng thái: **Hoàn thành mã nguồn, chờ áp migration và kiểm tra production**.
+
+Đã triển khai:
+
+- Bảng tin: bài nháp, đăng ngay, hẹn giờ, ghim và bình luận.
+- Lịch học: một lần, lặp 4/8/12 tuần, địa điểm, link online và hủy buổi.
+- Bài giảng: module, nội dung/video, nháp/hẹn giờ/xuất bản và tiến độ học sinh.
+- Tài liệu lớp: link ngoài, upload private tối đa 50 MB và signed URL tải xuống.
+- Target cả lớp hoặc một nhóm cho bảng tin, lịch, bài giảng và tài liệu.
+- Dashboard tổng hợp lớp/lịch; thông báo trong ứng dụng khi nội dung được xuất bản.
+- RLS cho toàn bộ dữ liệu dạy học và Storage; tệp target nhóm chỉ cấp quyền cho đúng nhóm.
+
+Việc cần làm trên production:
+
+1. Chạy `npx supabase@latest db push` để áp migration `202610250002` và `202610250003`.
+2. Chờ Vercel deploy commit mới trên `main`.
+3. Dùng tài khoản giáo viên/học sinh demo để chạy mục Auth, Lớp học, Nội dung và lịch trong checklist production.
+4. Chỉ chuyển sang Giai đoạn 3 sau khi xác nhận học sinh hai nhóm không xem chéo nội dung/tệp.

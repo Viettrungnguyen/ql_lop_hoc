@@ -36,6 +36,14 @@ export default async function DashboardLayout({
 
   if (!user) redirect("/login");
 
+  await supabase.rpc("publish_due_teaching_content");
+
+  const { count: unreadCount } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("recipient_id", user.id)
+    .is("read_at", null);
+
   const name =
     (user.user_metadata.display_name as string | undefined) ??
     user.email?.split("@")[0] ??
@@ -81,10 +89,10 @@ export default async function DashboardLayout({
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <button className="relative grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600" aria-label="Thông báo">
+            <Link href="/dashboard/notifications" className="relative grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600" aria-label="Thông báo">
               <Bell size={19} />
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#ff7a5c]" />
-            </button>
+              {Boolean(unreadCount) && <span className="absolute right-1.5 top-1 grid min-h-4 min-w-4 place-items-center rounded-full bg-[#ff7a5c] px-1 text-[9px] font-black text-white">{(unreadCount ?? 0) > 9 ? "9+" : unreadCount}</span>}
+            </Link>
             <div className="hidden items-center gap-3 rounded-xl border border-slate-200 bg-white py-1.5 pl-2 pr-3 sm:flex">
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#d9f36b] text-xs font-black text-[#102a2b]">
                 {name.slice(0, 2).toUpperCase()}

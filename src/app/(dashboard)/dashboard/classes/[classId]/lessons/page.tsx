@@ -1,0 +1,40 @@
+import { BookOpenCheck, CheckCircle2, ExternalLink, Plus, Video } from "lucide-react";
+
+import { AudienceSelect } from "@/components/classes/audience-select";
+import { FlashMessage } from "@/components/flash-message";
+import { createLesson, createLessonModule, markLessonComplete } from "@/features/classes/actions";
+import { createClient } from "@/lib/supabase/server";
+
+type Lesson = { id: string; module_id: string | null; title: string; summary: string | null; body: string; video_url: string | null; status: string; publish_at: string | null; created_at: string };
+type LessonModule = { id: string; title: string; description: string | null };
+
+export default async function LessonsPage({ params, searchParams }: { params: Promise<{ classId: string }>; searchParams: Promise<{ error?: string; message?: string }> }) {
+  const [{ classId }, flash] = await Promise.all([params, searchParams]);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const [{ data: membership }, { data: lessons }, { data: progress }, { data: groups }, { data: modules }] = await Promise.all([
+    supabase.from("class_members").select("role,capabilities").eq("class_id", classId).eq("user_id", user!.id).eq("status", "active").single(),
+    supabase.from("lessons").select("id,module_id,title,summary,body,video_url,status,publish_at,created_at").eq("class_id", classId).order("position").order("created_at"),
+    supabase.from("lesson_progress").select("lesson_id,status").eq("user_id", user!.id),
+    supabase.from("groups").select("id,name").eq("class_id", classId).is("deleted_at", null).order("name"),
+    supabase.from("lesson_modules").select("id,title,description").eq("class_id", classId).is("deleted_at", null).order("position"),
+  ]);
+  const manager = membership?.role === "owner" || membership?.role === "teacher" || Boolean(membership?.capabilities?.manage_content);
+  const completed = new Set((progress ?? []).filter((item) => item.status === "completed").map((item) => item.lesson_id));
+  const lessonList = (lessons ?? []) as Lesson[];
+  const moduleList = (modules ?? []) as LessonModule[];
+  const moduleNames = new Map(moduleList.map((module) => [module.id, module.title]));
+
+  return (
+    <div className="mx-auto grid max-w-7xl gap-6 px-5 py-7 sm:px-8 xl:grid-cols-[1fr_380px]">
+      <section><FlashMessage error={flash.error} message={flash.message} /><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Nội dung học tập</p><h2 className="font-display mt-2 text-3xl font-bold text-slate-950">Bài giảng</h2></div>
+        {moduleList.length > 0 && <div className="mt-5 flex flex-wrap gap-2">{moduleList.map((module) => <span className="rounded-full border border-teal-100 bg-teal-50 px-4 py-2 text-xs font-bold text-teal-800" key={module.id}>{module.title}</span>)}</div>}
+        <div className="mt-6 space-y-4">{lessonList.length ? lessonList.map((lesson, index) => <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm" key={lesson.id}><div className="flex items-start gap-4"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#eef4ed] font-black text-teal-800">{String(index + 1).padStart(2, "0")}</span><div className="min-w-0 flex-1">{lesson.module_id && <p className="mb-1 text-xs font-bold uppercase tracking-wide text-teal-700">{moduleNames.get(lesson.module_id) || "Module"}</p>}<div className="flex flex-wrap items-center gap-2"><h3 className="text-xl font-black text-slate-950">{lesson.title}</h3>{lesson.status === "draft" && <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Bản nháp</span>}{lesson.status === "scheduled" && <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700">Hẹn {lesson.publish_at ? formatDate(lesson.publish_at) : "xuất bản"}</span>}{completed.has(lesson.id) && <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700"><CheckCircle2 size={13} /> Đã hoàn thành</span>}</div>{lesson.summary && <p className="mt-2 text-sm leading-6 text-slate-500">{lesson.summary}</p>}{lesson.body && <p className="mt-5 whitespace-pre-wrap leading-7 text-slate-700">{lesson.body}</p>}<div className="mt-5 flex flex-wrap gap-2">{lesson.video_url && <a className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700" href={lesson.video_url} target="_blank" rel="noreferrer"><Video size={16} /> Xem video <ExternalLink size={14} /></a>}{!manager && !completed.has(lesson.id) && <form action={markLessonComplete}><input name="classId" type="hidden" value={classId} /><input name="lessonId" type="hidden" value={lesson.id} /><button className="rounded-xl bg-[#087f72] px-4 py-2 text-sm font-bold text-white">Đánh dấu hoàn thành</button></form>}</div></div></div></article>) : <div className="grid min-h-64 place-items-center rounded-3xl border border-dashed border-slate-300 bg-white/60 text-center"><div><BookOpenCheck className="mx-auto text-slate-300" size={36} /><p className="mt-4 font-black text-slate-800">Chưa có bài giảng</p></div></div>}</div>
+      </section>
+      {manager && <aside className="h-fit space-y-4 xl:sticky xl:top-28"><div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-teal-50 text-teal-700"><Plus size={18} /></span><h2 className="font-black text-slate-950">Tạo module</h2></div><form action={createLessonModule} className="mt-5 space-y-3"><input name="classId" type="hidden" value={classId} /><input className="field" name="title" placeholder="Tên module" required maxLength={160} /><textarea className="field min-h-16" name="description" placeholder="Mô tả (không bắt buộc)" maxLength={1000} /><button className="w-full rounded-xl border border-teal-700 px-4 py-2.5 text-sm font-bold text-teal-700">Thêm module</button></form></div><div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-teal-50 text-teal-700"><Plus size={18} /></span><h2 className="font-black text-slate-950">Tạo bài giảng</h2></div><form action={createLesson} className="mt-6 space-y-4"><input name="classId" type="hidden" value={classId} /><Field label="Module"><select className="field" name="moduleId" defaultValue=""><option value="">Không thuộc module</option>{moduleList.map((module) => <option value={module.id} key={module.id}>{module.title}</option>)}</select></Field><Field label="Tiêu đề"><input className="field" name="title" required maxLength={200} /></Field><Field label="Tóm tắt"><textarea className="field min-h-20" name="summary" maxLength={1000} /></Field><Field label="Nội dung"><textarea className="field min-h-36" name="body" maxLength={50000} /></Field><Field label="Video URL"><input className="field" name="videoUrl" type="url" placeholder="https://..." /></Field><Field label="Hẹn giờ xuất bản"><input className="field" name="publishAt" type="datetime-local" /></Field><AudienceSelect groups={groups ?? []} /><div className="grid grid-cols-3 gap-2"><button className="rounded-xl border border-slate-300 px-3 py-3 text-xs font-bold text-slate-600" name="status" value="draft">Lưu nháp</button><button className="rounded-xl border border-teal-700 px-3 py-3 text-xs font-bold text-teal-700" name="status" value="scheduled">Hẹn giờ</button><button className="rounded-xl bg-[#087f72] px-3 py-3 text-xs font-bold text-white" name="status" value="published">Xuất bản</button></div></form></div></aside>}
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block"><span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">{label}</span>{children}</label>; }
+function formatDate(value: string) { return new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Bangkok" }).format(new Date(value)); }

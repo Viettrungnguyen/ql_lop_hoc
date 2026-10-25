@@ -69,14 +69,16 @@ npx supabase@latest db push --include-seed
 Lệnh trên áp dụng:
 
 - `supabase/migrations/202610250001_phase0_foundation.sql`
+- `supabase/migrations/202610250002_phase1_classes.sql`
+- `supabase/migrations/202610250003_phase2_teaching.sql`
 - `supabase/seed.sql`
 
 Sau khi thành công, kiểm tra trong Supabase:
 
-- **Table Editor** có `profiles`, `education_levels`, `grade_levels`, `subjects`, `grade_subjects`, `audit_logs`.
+- **Table Editor** có các bảng nền tảng cùng `classes`, `class_members`, `groups`, `posts`, `schedule_events`, `lesson_modules`, `lessons`, `class_resources`, `notifications`.
 - **Storage** có `avatars`, `class-files`, `submissions`, `material-files`.
 - Các bucket đều ở chế độ private.
-- **Database → Migrations** ghi nhận migration `202610250001`.
+- **Database → Migrations** ghi nhận đủ migration `202610250001`, `202610250002`, `202610250003`.
 
 Không chạy lại migration bằng SQL Editor sau khi `db push` đã thành công. Các thay đổi schema tiếp theo phải được tạo thành migration mới.
 
@@ -312,6 +314,15 @@ Sau khi kiểm tra xong, dùng câu lệnh xóa đã được để ở cuối f
 - [ ] Các bucket Storage đều private.
 - [ ] Security Advisor không báo bảng public thiếu RLS.
 - [ ] Không có secret key trong GitHub, browser bundle hoặc build log.
+
+### Giai đoạn 2 — tổ chức dạy học
+
+- [ ] Giáo viên tạo lớp, học sinh nhập mã và được duyệt thành công.
+- [ ] Tạo hai nhóm; bài viết, lịch, bài giảng và tài liệu nhóm A không hiện cho nhóm B.
+- [ ] Bài hẹn giờ chỉ xuất bản sau thời điểm đã chọn khi có người mở dashboard.
+- [ ] Lịch lặp tuần tạo đúng số buổi, đúng múi giờ và có thể hủy từng buổi.
+- [ ] Tệp private tải được qua signed URL; học sinh ngoài nhóm không tạo được URL tải.
+- [ ] Học sinh nhận thông báo khi bài viết, lịch, bài giảng hoặc tài liệu được xuất bản.
 
 ## 12. Xử lý lỗi thường gặp
 
