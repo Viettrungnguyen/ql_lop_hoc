@@ -76,6 +76,7 @@ Sản phẩm là một triển khai độc lập. Không sao chép tên thương
 - [07-deploy-va-kiem-tra-prod.md](./07-deploy-va-kiem-tra-prod.md): deploy và checklist kiểm tra trên production.
 - [08-quyet-dinh-san-pham.md](./08-quyet-dinh-san-pham.md): các quyết định mặc định, rủi ro và câu hỏi cần chốt.
 - [09-tien-do-trien-khai.md](./09-tien-do-trien-khai.md): trạng thái thực hiện thực tế theo từng giai đoạn.
+- [HUONG-DAN-DEPLOY.md](./HUONG-DAN-DEPLOY.md): hướng dẫn duy nhất để deploy Supabase và Vercel production.
 
 ## 6. Chỉ số thành công ban đầu
 

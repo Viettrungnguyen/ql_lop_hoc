@@ -16,7 +16,11 @@ const registerSchema = loginSchema.extend({
   mode: z.enum(["teacher", "student"]),
 });
 
-function redirectWithMessage(path: string, type: "error" | "message", text: string) {
+function redirectWithMessage(
+  path: string,
+  type: "error" | "message",
+  text: string,
+): never {
   redirect(`${path}?${type}=${encodeURIComponent(text)}`);
 }
 

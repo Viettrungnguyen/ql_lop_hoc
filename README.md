@@ -28,4 +28,6 @@ Nền tảng LMS tập trung vào hoạt động giảng dạy: tổ chức lớ
 4. Cấu hình Supabase Auth Site URL và Redirect URL về domain Vercel.
 5. Deploy repository lên Vercel.
 
+Hướng dẫn đầy đủ: [docs/HUONG-DAN-DEPLOY.md](./docs/HUONG-DAN-DEPLOY.md).
+
 Theo yêu cầu dự án, việc kiểm tra chức năng được thực hiện trên môi trường production. Checklist nằm tại [docs/07-deploy-va-kiem-tra-prod.md](./docs/07-deploy-va-kiem-tra-prod.md).
