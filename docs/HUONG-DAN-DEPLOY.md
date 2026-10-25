@@ -276,6 +276,25 @@ Tài liệu chính thức: [Supabase GitHub Integration](https://supabase.com/do
 
 ## 11. Smoke checklist production
 
+### Tạo nhanh hai tài khoản demo không cần xác minh email
+
+Không thêm tài khoản demo vào migration tự động. Mở Supabase **SQL Editor**, dán và chạy toàn bộ file:
+
+```text
+supabase/manual/create_demo_accounts.sql
+```
+
+Script sẽ tạo hoặc reset hai tài khoản:
+
+```text
+teacher.demo@example.com
+student.demo@example.com
+```
+
+Email được đánh dấu đã xác minh. Password mạnh được sinh ngẫu nhiên và hiển thị trong result cuối của SQL Editor. Sao chép password ngay sau khi chạy; chạy lại script sẽ sinh password mới.
+
+Sau khi kiểm tra xong, dùng câu lệnh xóa đã được để ở cuối file SQL. Không giữ tài khoản demo trên production lâu hơn cần thiết.
+
 ### Giao diện và Auth
 
 - [ ] `/` hiển thị landing page.
