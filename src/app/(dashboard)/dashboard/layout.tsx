@@ -1,28 +1,15 @@
 import {
   Bell,
-  BookOpenText,
-  CalendarDays,
   ChevronDown,
-  FolderTree,
-  GraduationCap,
-  LayoutDashboard,
   LogOut,
-  Menu,
 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { signOut } from "@/app/(dashboard)/actions";
 import { BrandMark } from "@/components/brand-mark";
+import { DashboardNavigation, MobileDashboardMenu } from "@/components/dashboard/dashboard-navigation";
 import { createClient } from "@/lib/supabase/server";
-
-const navigation = [
-  [LayoutDashboard, "Tổng quan", "/dashboard"],
-  [GraduationCap, "Lớp học", "/dashboard/classes"],
-  [CalendarDays, "Lịch", "/dashboard/calendar"],
-  [FolderTree, "Học liệu", "/dashboard/materials"],
-  [BookOpenText, "Bài tập", "/dashboard/assignments"],
-] as const;
 
 export default async function DashboardLayout({
   children,
@@ -53,26 +40,12 @@ export default async function DashboardLayout({
     <main className="min-h-screen bg-[#f4f6f1] lg:grid lg:grid-cols-[260px_1fr]">
       <aside className="hidden border-r border-slate-200 bg-white px-5 py-6 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
         <BrandMark className="px-2" />
-        <nav className="mt-10 space-y-1.5">
-          {navigation.map(([Icon, label, href], index) => (
-            <Link
-              className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition ${
-                index === 0
-                  ? "bg-[#e5f4ef] text-[#075b55]"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-              }`}
-              href={href}
-              key={href}
-            >
-              <Icon size={19} /> {label}
-            </Link>
-          ))}
-        </nav>
+        <div className="mt-10"><DashboardNavigation /></div>
         <div className="mt-auto rounded-2xl bg-[#102a2b] p-4 text-white">
-          <p className="text-xs font-bold uppercase tracking-widest text-[#d9f36b]">Giai đoạn 0</p>
-          <p className="mt-2 text-sm font-bold">Nền tảng đã sẵn sàng</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-[#d9f36b]">Giai đoạn 2</p>
+          <p className="mt-2 text-sm font-bold">Tổ chức dạy học</p>
           <p className="mt-1 text-xs leading-5 text-slate-300">
-            Lớp học và thành viên sẽ được mở trong giai đoạn tiếp theo.
+            Lớp học, lịch, bài giảng và tài liệu đã sẵn sàng.
           </p>
         </div>
       </aside>
@@ -80,9 +53,7 @@ export default async function DashboardLayout({
       <section className="min-w-0">
         <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200 bg-[#f4f6f1]/90 px-5 backdrop-blur-xl sm:px-8">
           <div className="flex items-center gap-3">
-            <button className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 lg:hidden" aria-label="Mở menu">
-              <Menu size={20} />
-            </button>
+            <MobileDashboardMenu />
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Không gian cá nhân</p>
               <p className="hidden text-sm font-semibold text-slate-500 sm:block">Theo dõi việc dạy và học trong ngày</p>
