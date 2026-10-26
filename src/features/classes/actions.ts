@@ -126,6 +126,7 @@ export async function createPost(formData: FormData) {
       status: z.enum(["draft", "scheduled", "published"]),
       publishAt: z.string().optional(),
       groupId: z.string().uuid().optional(),
+      resourceIds: z.array(uuid).max(10),
     })
     .safeParse({
       classId: formData.get("classId"),
@@ -134,9 +135,16 @@ export async function createPost(formData: FormData) {
       status: formData.get("status"),
       publishAt: formData.get("publishAt") || undefined,
       groupId: optionalUuid(formData.get("groupId")),
+      resourceIds: formData.getAll("resourceIds"),
     });
 
-  if (!parsed.success) return;
+  if (!parsed.success) {
+    const fallbackClassId = uuid.safeParse(formData.get("classId"));
+    if (fallbackClassId.success) {
+      return go(`/dashboard/classes/${fallbackClassId.data}`, "error", "Thông tin bài đăng chưa hợp lệ hoặc có quá 10 tài liệu đính kèm.");
+    }
+    return;
+  }
   const publishAt = parsed.data.status === "scheduled" && parsed.data.publishAt
     ? bangkokDate(parsed.data.publishAt)
     : undefined;
@@ -144,6 +152,19 @@ export async function createPost(formData: FormData) {
     return go(`/dashboard/classes/${parsed.data.classId}`, "error", "Thời gian hẹn đăng phải ở tương lai.");
   }
   const { supabase, user } = await authenticatedClient();
+  const resourceIds = [...new Set(parsed.data.resourceIds)];
+  if (resourceIds.length) {
+    const { data: resources, error: resourceError } = await supabase
+      .from("class_resources")
+      .select("id")
+      .eq("class_id", parsed.data.classId)
+      .eq("status", "published")
+      .is("deleted_at", null)
+      .in("id", resourceIds);
+    if (resourceError || resources?.length !== resourceIds.length) {
+      return go(`/dashboard/classes/${parsed.data.classId}`, "error", "Có tài liệu đính kèm không hợp lệ.");
+    }
+  }
   const postId = crypto.randomUUID();
   const targetReady = await prepareGroupTarget(supabase, parsed.data.classId, "post", postId, parsed.data.groupId);
   if (!targetReady) return go(`/dashboard/classes/${parsed.data.classId}`, "error", "Nhóm nhận nội dung chưa hợp lệ.");
@@ -153,7 +174,7 @@ export async function createPost(formData: FormData) {
     author_id: user.id,
     title: parsed.data.title ?? null,
     body: parsed.data.body,
-    status: parsed.data.status,
+    status: "draft",
     publish_at: publishAt?.toISOString() ?? null,
   });
 
@@ -161,6 +182,33 @@ export async function createPost(formData: FormData) {
   if (error) {
     await removePreparedTarget(supabase, "post", postId);
     return go(path, "error", "Không thể đăng thông báo.");
+  }
+
+  if (resourceIds.length) {
+    const { error: attachmentError } = await supabase.from("post_attachments").insert(
+      resourceIds.map((resourceId, position) => ({
+        post_id: postId,
+        resource_id: resourceId,
+        position,
+      })),
+    );
+    if (attachmentError) {
+      await supabase.from("posts").update({ deleted_at: new Date().toISOString() }).eq("id", postId);
+      await removePreparedTarget(supabase, "post", postId);
+      return go(path, "error", "Không thể gắn tài liệu vào bài đăng.");
+    }
+  }
+
+  if (parsed.data.status !== "draft") {
+    const { error: publishError } = await supabase
+      .from("posts")
+      .update({ status: parsed.data.status })
+      .eq("id", postId);
+    if (publishError) {
+      await supabase.from("posts").update({ deleted_at: new Date().toISOString() }).eq("id", postId);
+      await removePreparedTarget(supabase, "post", postId);
+      return go(path, "error", "Đã lưu nội dung nhưng không thể xuất bản bài đăng.");
+    }
   }
   revalidatePath(path);
   const message = parsed.data.status === "draft"
@@ -190,6 +238,74 @@ export async function togglePostPin(formData: FormData) {
   revalidatePath(path);
 }
 
+export async function togglePostComments(formData: FormData) {
+  const parsed = classMutationSchema.extend({ postId: uuid, locked: z.enum(["true", "false"]) }).safeParse({
+    classId: formData.get("classId"),
+    postId: formData.get("postId"),
+    locked: formData.get("locked"),
+  });
+  if (!parsed.success) return;
+
+  const { supabase } = await authenticatedClient();
+  const path = `/dashboard/classes/${parsed.data.classId}`;
+  const { error } = await supabase
+    .from("posts")
+    .update({ comments_locked: parsed.data.locked !== "true" })
+    .eq("id", parsed.data.postId)
+    .eq("class_id", parsed.data.classId);
+  if (error) return go(path, "error", "Không thể cập nhật quyền bình luận.");
+  revalidatePath(path);
+}
+
+export async function updatePost(formData: FormData) {
+  const parsed = classMutationSchema.extend({
+    postId: uuid,
+    title: z.string().trim().max(160).optional(),
+    body: z.string().trim().min(1).max(10000),
+  }).safeParse({
+    classId: formData.get("classId"),
+    postId: formData.get("postId"),
+    title: formData.get("title") || undefined,
+    body: formData.get("body"),
+  });
+  if (!parsed.success) return;
+
+  const { supabase } = await authenticatedClient();
+  const path = `/dashboard/classes/${parsed.data.classId}`;
+  const { error } = await supabase
+    .from("posts")
+    .update({
+      title: parsed.data.title ?? null,
+      body: parsed.data.body,
+      edited_at: new Date().toISOString(),
+    })
+    .eq("id", parsed.data.postId)
+    .eq("class_id", parsed.data.classId)
+    .neq("status", "archived");
+  if (error) return go(path, "error", "Không thể cập nhật bài đăng.");
+  revalidatePath(path);
+  go(path, "message", "Đã cập nhật bài đăng.");
+}
+
+export async function archivePost(formData: FormData) {
+  const parsed = classMutationSchema.extend({ postId: uuid }).safeParse({
+    classId: formData.get("classId"),
+    postId: formData.get("postId"),
+  });
+  if (!parsed.success) return;
+
+  const { supabase } = await authenticatedClient();
+  const path = `/dashboard/classes/${parsed.data.classId}`;
+  const { error } = await supabase
+    .from("posts")
+    .update({ status: "archived" })
+    .eq("id", parsed.data.postId)
+    .eq("class_id", parsed.data.classId);
+  if (error) return go(path, "error", "Không thể lưu trữ bài đăng.");
+  revalidatePath(path);
+  go(path, "message", "Đã lưu trữ bài đăng.");
+}
+
 export async function addComment(formData: FormData) {
   const parsed = classMutationSchema
     .extend({ postId: uuid, body: z.string().trim().min(1).max(2000) })
@@ -208,6 +324,23 @@ export async function addComment(formData: FormData) {
   });
   const path = `/dashboard/classes/${parsed.data.classId}`;
   if (error) return go(path, "error", "Không thể gửi bình luận.");
+  revalidatePath(path);
+}
+
+export async function deleteComment(formData: FormData) {
+  const parsed = classMutationSchema.extend({ commentId: uuid }).safeParse({
+    classId: formData.get("classId"),
+    commentId: formData.get("commentId"),
+  });
+  if (!parsed.success) return;
+
+  const { supabase } = await authenticatedClient();
+  const path = `/dashboard/classes/${parsed.data.classId}`;
+  const { error } = await supabase
+    .from("post_comments")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", parsed.data.commentId);
+  if (error) return go(path, "error", "Không thể xóa bình luận.");
   revalidatePath(path);
 }
 
@@ -298,6 +431,54 @@ export async function cancelEvent(formData: FormData) {
   if (error) return go(path, "error", "Không thể hủy buổi học.");
   revalidatePath(path);
   go(path, "message", "Đã hủy buổi học.");
+}
+
+export async function updateEvent(formData: FormData) {
+  const parsed = classMutationSchema.extend({
+    eventId: uuid,
+    title: z.string().trim().min(1).max(160),
+    description: z.string().trim().max(5000).optional(),
+    startsAt: z.string().min(16),
+    endsAt: z.string().min(16),
+    location: z.string().trim().max(300).optional(),
+    meetingUrl: z.string().url().max(2000).optional(),
+  }).safeParse({
+    classId: formData.get("classId"),
+    eventId: formData.get("eventId"),
+    title: formData.get("title"),
+    description: formData.get("description") || undefined,
+    startsAt: formData.get("startsAt"),
+    endsAt: formData.get("endsAt"),
+    location: formData.get("location") || undefined,
+    meetingUrl: formData.get("meetingUrl") || undefined,
+  });
+  if (!parsed.success) return;
+
+  const startsAt = bangkokDate(parsed.data.startsAt);
+  const endsAt = bangkokDate(parsed.data.endsAt);
+  const path = `/dashboard/classes/${parsed.data.classId}/calendar`;
+  if (!Number.isFinite(startsAt.getTime()) || !Number.isFinite(endsAt.getTime()) || endsAt <= startsAt) {
+    return go(path, "error", "Thời gian buổi học chưa hợp lệ.");
+  }
+
+  const { supabase } = await authenticatedClient();
+  const { error } = await supabase
+    .from("schedule_events")
+    .update({
+      title: parsed.data.title,
+      description: parsed.data.description ?? null,
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      location: parsed.data.location ?? null,
+      meeting_url: parsed.data.meetingUrl ?? null,
+    })
+    .eq("id", parsed.data.eventId)
+    .eq("class_id", parsed.data.classId)
+    .eq("status", "active");
+  if (error) return go(path, "error", "Không thể cập nhật buổi học.");
+  revalidatePath(path);
+  revalidatePath("/dashboard/calendar");
+  go(path, "message", "Đã cập nhật buổi học.");
 }
 
 export async function createLessonModule(formData: FormData) {

@@ -43,17 +43,17 @@ Trạng thái: **Hoàn thành mã nguồn, chờ áp migration và kiểm tra pr
 
 Đã triển khai:
 
-- Bảng tin: bài nháp, đăng ngay, hẹn giờ, ghim và bình luận.
-- Lịch học: một lần, lặp 4/8/12 tuần, địa điểm, link online và hủy buổi.
+- Bảng tin: bài nháp, đăng ngay, hẹn giờ, ghim, chỉnh sửa/lưu trữ, khóa/xóa bình luận và tối đa 10 tài liệu đính kèm.
+- Lịch học: một lần, lặp 4/8/12 tuần, địa điểm, link online, chỉnh sửa và hủy buổi.
 - Bài giảng: module, nội dung/video, nháp/hẹn giờ/xuất bản và tiến độ học sinh.
 - Tài liệu lớp: link ngoài, upload private tối đa 50 MB và signed URL tải xuống.
 - Target cả lớp hoặc một nhóm cho bảng tin, lịch, bài giảng và tài liệu.
-- Dashboard tổng hợp lớp/lịch; thông báo trong ứng dụng khi nội dung được xuất bản.
+- Dashboard tổng hợp lớp/lịch; thông báo có deep link khi nội dung được xuất bản hoặc lịch thay đổi/hủy.
 - RLS cho toàn bộ dữ liệu dạy học và Storage; tệp target nhóm chỉ cấp quyền cho đúng nhóm.
 
 Việc cần làm trên production:
 
-1. Chạy `npx supabase@latest db push` để áp migration `202610250002` và `202610250003`.
+1. Chạy `npx supabase@latest db push` để áp các migration chưa có, mới nhất là `202610260001`.
 2. Chờ Vercel deploy commit mới trên `main`.
 3. Dùng tài khoản giáo viên/học sinh demo để chạy mục Auth, Lớp học, Nội dung và lịch trong checklist production.
 4. Chỉ chuyển sang Giai đoạn 3 sau khi xác nhận học sinh hai nhóm không xem chéo nội dung/tệp.

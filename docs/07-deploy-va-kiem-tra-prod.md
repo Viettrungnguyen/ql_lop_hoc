@@ -67,7 +67,9 @@ Không dùng email thật của học sinh để kiểm tra. Không xóa cứng 
 
 - [ ] Bài nháp/hẹn giờ không lộ sớm.
 - [ ] Bảng tin, bình luận, khóa bình luận và ghim hoạt động.
+- [ ] Đính kèm tối đa 10 tài liệu vào bài đăng; chỉnh sửa hiển thị nhãn và lưu trữ ẩn khỏi học sinh.
 - [ ] Lịch hiển thị đúng ngày/giờ `Asia/Bangkok`; link và nhắc lịch đúng người.
+- [ ] Chỉnh sửa/hủy buổi học gửi thông báo đúng lớp/nhóm và mở đúng buổi từ deep link.
 - [ ] Bài giảng/tài liệu private tải qua signed URL, URL hết hạn không còn dùng được.
 
 ### Bài tập và điểm
